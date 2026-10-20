@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Eye, EyeOff, Moon, RotateCcw, Shuffle, Sun } from "lucide-react";
+import { Check, Eye, EyeOff, Moon, RotateCcw, Sun } from "lucide-react";
 import { askQuestions, byId, hardQuestions, hotTopics, otherQuestions, twentyQuestions } from "@/lib/bank";
-import { drawHot, drawPerson, freshSession, type DrawnCard, type PersonRound, type SessionState } from "@/lib/draw";
+import { drawPerson, freshSession, personTitle, type DrawnCard, type PersonRound, type SessionState } from "@/lib/draw";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-const STORAGE_KEY = "branch-interview-session-v2";
-const DONE_KEY = "branch-interview-done-v2";
+const STORAGE_KEY = "branch-interview-session-v10";
+const DONE_KEY = "branch-interview-done-v10";
 const THEME_KEY = "branch-interview-theme";
-const HEADCOUNT = 14;
+const HEADCOUNT = 17;
 
 const LIGHT_BG = "#f3f3f1";
 const DARK_BG = "#161616";
@@ -120,7 +120,7 @@ function Home() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as SessionState;
-        if (parsed?.pools && Array.isArray(parsed.people)) {
+        if (parsed?.pools && Array.isArray(parsed.people) && Array.isArray(parsed.remaining) && Array.isArray(parsed.memberPairs)) {
           setSession(parsed);
           if (parsed.people.length >= HEADCOUNT && localStorage.getItem(DONE_KEY) === "1") setDone(true);
         }
@@ -187,10 +187,9 @@ function Home() {
         </button>
       </header>
 
-      <section className="mb-4 grid grid-cols-2 gap-2 text-xs text-muted sm:grid-cols-4">
+      <section className="mb-4 grid grid-cols-3 gap-2 text-xs text-muted">
         <Remain label="难题剩余" left={session.pools.hard.length} total={hardQuestions.length} />
         <Remain label="二十大剩余" left={session.pools.twenty.length} total={twentyQuestions.length} />
-        <Remain label="其他题剩余" left={session.pools.other.length} total={otherQuestions.length} />
         <Remain label="单独提问剩余" left={session.pools.ask.length} total={askQuestions.length} />
       </section>
 
@@ -198,39 +197,7 @@ function Home() {
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-base font-medium">时事热点</h2>
         </div>
-        {session.hotId ? (
-          <>
-            <QuestionBlock
-              label="时事热点"
-              itemId={session.hotId}
-              showAnswers={showAnswers}
-            />
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                className="flex size-11 items-center justify-center border border-line bg-surface text-fg"
-                aria-label="更换时事热点"
-                onClick={() => {
-                  setSession((prev) => drawHot(prev));
-                  setConfirmReset(false);
-                }}
-              >
-                <Shuffle className="size-4" />
-              </button>
-            </div>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="min-h-11 rounded-sm bg-accent px-4 text-sm font-medium text-accent-fg"
-            onClick={() => {
-              setSession((prev) => drawHot(prev));
-              setConfirmReset(false);
-            }}
-          >
-            抽取时事热点
-          </button>
-        )}
+        <QuestionBlock itemId="hot-1" showAnswers={showAnswers} />
       </section>
 
       <section id="person" className="mt-4 rounded-sm border border-line bg-surface p-4 sm:p-5">
@@ -255,7 +222,7 @@ function Home() {
           <PersonCard person={current} showAnswers={showAnswers} current onToggle={toggleClicked} />
         ) : (
           <p className="text-sm leading-relaxed text-muted">
-            每位同学 6 题：1 道难题或二十大题、2 道其他党章题、3 道单独提问。点下面按钮给下一位抽一套新的。
+            每位同学 4 题，并随机抽一位还没抽到的考察对象。点下面按钮开始。
           </p>
         )}
       </section>
@@ -266,7 +233,12 @@ function Home() {
           <div className="flex flex-col gap-2">
             {earlier.map((person) => (
               <details key={person.n} className="rounded-sm border border-line bg-surface px-4 py-3">
-                <summary className="cursor-pointer text-sm font-medium">第 {person.n} 位</summary>
+                <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                  <span>
+                    第 {person.n} 位 · {personTitle(person.who)}
+                  </span>
+                  <span className="shrink-0 font-normal text-muted">党员：{person.members.map((item) => item.name).join("、")}</span>
+                </summary>
                 <div className="mt-3">
                   <PersonBody person={person} showAnswers={showAnswers} onToggle={toggleClicked} />
                 </div>
@@ -282,7 +254,7 @@ function Home() {
         <Bank title="党章 · 难" items={hardQuestions} />
         <Bank title="党章 · 二十大" items={twentyQuestions} />
         <Bank title="党章 · 其他" items={otherQuestions} />
-        <Bank title="单独提问 ②—⑭" items={askQuestions} />
+        <Bank title="单独提问" items={askQuestions} />
       </section>
 
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface px-4 py-3">
@@ -361,11 +333,9 @@ function Remain({ label, left, total }: { label: string; left: number; total: nu
 }
 
 function QuestionBlock({
-  label,
   itemId,
   showAnswers,
 }: {
-  label: string;
   itemId: string;
   showAnswers: boolean;
 }) {
@@ -373,7 +343,6 @@ function QuestionBlock({
   if (!item) return null;
   return (
     <article>
-      <p className="mb-2 text-sm text-muted">{label}</p>
       <p className="text-base leading-relaxed">{item.q}</p>
       {showAnswers && (
         <p className="mt-3 rounded-sm bg-surface-2 px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap text-muted">
@@ -397,7 +366,13 @@ function PersonCard({
 }) {
   return (
     <div>
-      <p className="mb-3 text-base font-medium">{current ? `当前 · 第 ${person.n} 位` : `第 ${person.n} 位`}</p>
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <p className="text-base font-medium">
+          {current ? "当前 · " : `第 ${person.n} 位 · `}
+          {personTitle(person.who)}
+        </p>
+        <p className="shrink-0 text-right text-sm text-fg">党员：{person.members.map((item) => item.name).join("、")}</p>
+      </div>
       {person.note && <p className="mb-3 text-sm text-muted">{person.note}</p>}
       <PersonBody person={person} showAnswers={showAnswers} onToggle={onToggle} />
     </div>
