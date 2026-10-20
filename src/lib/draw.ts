@@ -8,6 +8,7 @@ export type DrawnCard = {
   id: string;
   kind: "hot" | "hard" | "twenty" | "other" | "ask";
   label: string;
+  clicked?: boolean;
 };
 
 export type PersonRound = {
@@ -69,6 +70,8 @@ const kindLabel: Record<DrawnCard["kind"], string> = {
   ask: "单独提问",
 };
 
+const NOT_FOR_FIRST = "ask-9";
+
 export function drawPerson(state: SessionState): SessionState {
   const pools: Pools = {
     hot: [...state.pools.hot],
@@ -100,9 +103,12 @@ export function drawPerson(state: SessionState): SessionState {
 
   const asks: DrawnCard[] = [];
   const takenAsk: string[] = [];
+  const first = state.people.length === 0;
+  const askSource = first ? poolIds.ask.filter((id) => id !== NOT_FOR_FIRST) : poolIds.ask;
   for (let i = 0; i < 3; i += 1) {
-    const picked = take(pools.ask, poolIds.ask, takenAsk);
-    pools.ask = picked.pool;
+    const askPool = first ? pools.ask.filter((id) => id !== NOT_FOR_FIRST) : pools.ask;
+    const picked = take(askPool, askSource, takenAsk);
+    pools.ask = first && pools.ask.includes(NOT_FOR_FIRST) ? [...picked.pool, NOT_FOR_FIRST] : picked.pool;
     takenAsk.push(picked.id);
     if (picked.recycled && !notes.some((note) => note.startsWith("单独提问"))) {
       notes.push("单独提问已抽完，开始新一轮");

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Moon, RotateCcw, Sun } from "lucide-react";
+import { Check, Eye, EyeOff, Moon, RotateCcw, Shuffle, Sun } from "lucide-react";
 import { askQuestions, byId, hardQuestions, hotTopics, otherQuestions, twentyQuestions } from "@/lib/bank";
 import { drawHot, drawPerson, freshSession, type DrawnCard, type PersonRound, type SessionState } from "@/lib/draw";
 
@@ -110,7 +110,7 @@ function playThemeRipple(origin: { x: number; y: number }, fromDark: boolean) {
 function Home() {
   const [session, setSession] = useState<SessionState>(freshSession);
   const [ready, setReady] = useState(false);
-  const [showAnswers, setShowAnswers] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(true);
   const [confirmReset, setConfirmReset] = useState(false);
   const [done, setDone] = useState(false);
   const [night, setNight] = useState(false);
@@ -140,6 +140,22 @@ function Home() {
 
   const current = session.people.at(-1) ?? null;
   const earlier = session.people.slice(0, -1).reverse();
+
+  function toggleClicked(personN: number, cardId: string) {
+    setSession((prev) => ({
+      ...prev,
+      people: prev.people.map((person) =>
+        person.n !== personN
+          ? person
+          : {
+              ...person,
+              cards: person.cards.map((card) =>
+                card.id === cardId ? { ...card, clicked: !card.clicked } : card,
+              ),
+            },
+      ),
+    }));
+  }
 
   function setTheme(dark: boolean, origin?: { x: number; y: number }) {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -180,19 +196,30 @@ function Home() {
 
       <section className="rounded-sm border border-line bg-surface p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-medium">时事热点</h2>
-          </div>
-          <span className="border border-line px-2 py-1 text-xs text-muted">全员回答</span>
+          <h2 className="text-base font-medium">时事热点</h2>
         </div>
         {session.hotId ? (
-          <QuestionBlock
-            label="时事热点"
-            itemId={session.hotId}
-            showAnswers={showAnswers}
-          />
-        ) : null}
-        <div className="mt-4 flex flex-wrap gap-2">
+          <>
+            <QuestionBlock
+              label="时事热点"
+              itemId={session.hotId}
+              showAnswers={showAnswers}
+            />
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className="flex size-11 items-center justify-center border border-line bg-surface text-fg"
+                aria-label="更换时事热点"
+                onClick={() => {
+                  setSession((prev) => drawHot(prev));
+                  setConfirmReset(false);
+                }}
+              >
+                <Shuffle className="size-4" />
+              </button>
+            </div>
+          </>
+        ) : (
           <button
             type="button"
             className="min-h-11 rounded-sm bg-accent px-4 text-sm font-medium text-accent-fg"
@@ -201,9 +228,9 @@ function Home() {
               setConfirmReset(false);
             }}
           >
-            {session.hotId ? "更换时事热点" : "抽取时事热点"}
+            抽取时事热点
           </button>
-        </div>
+        )}
       </section>
 
       <section id="person" className="mt-4 rounded-sm border border-line bg-surface p-4 sm:p-5">
@@ -216,11 +243,16 @@ function Home() {
         {done ? (
           <div className="flex flex-col gap-6">
             {session.people.map((person) => (
-              <PersonCard key={person.n} person={person} showAnswers={showAnswers} />
+              <PersonCard
+                key={person.n}
+                person={person}
+                showAnswers={showAnswers}
+                onToggle={toggleClicked}
+              />
             ))}
           </div>
         ) : current ? (
-          <PersonCard person={current} showAnswers={showAnswers} current />
+          <PersonCard person={current} showAnswers={showAnswers} current onToggle={toggleClicked} />
         ) : (
           <p className="text-sm leading-relaxed text-muted">
             每位同学 6 题：1 道难题或二十大题、2 道其他党章题、3 道单独提问。点下面按钮给下一位抽一套新的。
@@ -236,7 +268,7 @@ function Home() {
               <details key={person.n} className="rounded-sm border border-line bg-surface px-4 py-3">
                 <summary className="cursor-pointer text-sm font-medium">第 {person.n} 位</summary>
                 <div className="mt-3">
-                  <PersonBody person={person} showAnswers={showAnswers} />
+                  <PersonBody person={person} showAnswers={showAnswers} onToggle={toggleClicked} />
                 </div>
               </details>
             ))}
@@ -356,41 +388,86 @@ function PersonCard({
   person,
   showAnswers,
   current,
+  onToggle,
 }: {
   person: PersonRound;
   showAnswers: boolean;
   current?: boolean;
+  onToggle: (personN: number, cardId: string) => void;
 }) {
   return (
     <div>
       <p className="mb-3 text-base font-medium">{current ? `当前 · 第 ${person.n} 位` : `第 ${person.n} 位`}</p>
       {person.note && <p className="mb-3 text-sm text-muted">{person.note}</p>}
-      <PersonBody person={person} showAnswers={showAnswers} />
+      <PersonBody person={person} showAnswers={showAnswers} onToggle={onToggle} />
     </div>
   );
 }
 
-function PersonBody({ person, showAnswers }: { person: PersonRound; showAnswers: boolean }) {
+function PersonBody({
+  person,
+  showAnswers,
+  onToggle,
+}: {
+  person: PersonRound;
+  showAnswers: boolean;
+  onToggle: (personN: number, cardId: string) => void;
+}) {
   return (
     <div className="flex flex-col gap-3">
       {person.cards.map((card, index) => (
-        <Card key={`${person.n}-${card.id}`} index={index + 1} card={card} showAnswers={showAnswers} />
+        <Card
+          key={`${person.n}-${card.id}`}
+          index={index + 1}
+          card={card}
+          showAnswers={showAnswers}
+          onToggle={() => onToggle(person.n, card.id)}
+        />
       ))}
     </div>
   );
 }
 
-function Card({ index, card, showAnswers }: { index: number; card: DrawnCard; showAnswers: boolean }) {
+function Card({
+  index,
+  card,
+  showAnswers,
+  onToggle,
+}: {
+  index: number;
+  card: DrawnCard;
+  showAnswers: boolean;
+  onToggle: () => void;
+}) {
   const item = byId[card.id];
   if (!item) return null;
   return (
-    <article className="rounded-sm border border-line bg-bg px-3 py-3">
-      <p className="mb-1 text-sm text-muted">
-        {index}. {card.label}
-      </p>
-      <p className="text-sm leading-relaxed">{item.q}</p>
-      {showAnswers && <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">{item.a}</p>}
-    </article>
+    <button
+      type="button"
+      className={
+        "w-full rounded-sm border px-3 py-3 text-left " +
+        (card.clicked ? "question-clicked" : "border-line bg-bg")
+      }
+      aria-pressed={Boolean(card.clicked)}
+      onClick={onToggle}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="mb-1 text-sm text-muted">
+            {index}. {card.label}
+          </p>
+          <p className="text-sm leading-relaxed text-fg">{item.q}</p>
+          {showAnswers && (
+            <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">{item.a}</p>
+          )}
+        </div>
+        {card.clicked && (
+          <span className="question-mark flex shrink-0 items-center">
+            <Check className="size-7" />
+          </span>
+        )}
+      </div>
+    </button>
   );
 }
 

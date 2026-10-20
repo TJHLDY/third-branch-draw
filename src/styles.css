@@ -44,3 +44,21 @@ html[data-theme="dark"] {
   --color-gold: #f3f3f1;
   color-scheme: dark;
 }
+
+.question-clicked {
+  border-color: #b7e0c2;
+  background: #e8f6ec;
+}
+
+.question-clicked .question-mark {
+  color: #1f7a45;
+}
+
+html[data-theme="dark"] .question-clicked {
+  border-color: #3d6b52;
+  background: #1a3326;
+}
+
+html[data-theme="dark"] .question-clicked .question-mark {
+  color: #8fd4a8;
+}
