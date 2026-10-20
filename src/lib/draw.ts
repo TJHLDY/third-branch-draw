@@ -6,7 +6,7 @@ export type Pools = Record<PoolKey, string[]>;
 
 export type DrawnCard = {
   id: string;
-  kind: "hot" | "hard" | "twenty" | "other" | "ask";
+  kind: "hot" | "hard" | "twenty" | "ask";
   label: string;
   clicked?: boolean;
 };
@@ -106,7 +106,6 @@ export function freshPools(): Pools {
     hot: [...poolIds.hot],
     hard: [...poolIds.hard],
     twenty: [...poolIds.twenty],
-    other: [...poolIds.other],
     ask: [...poolIds.ask],
   };
 }
@@ -150,7 +149,6 @@ const kindLabel: Record<DrawnCard["kind"], string> = {
   hot: "时事热点",
   hard: "党章 · 难",
   twenty: "党章 · 二十大",
-  other: "党章 · 其他",
   ask: "单独提问",
 };
 
@@ -161,7 +159,6 @@ export function drawPerson(state: SessionState): SessionState {
     hot: [...state.pools.hot],
     hard: [...state.pools.hard],
     twenty: [...state.pools.twenty],
-    other: [...state.pools.other],
     ask: [...state.pools.ask],
   };
   const notes: string[] = [];

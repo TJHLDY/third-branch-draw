@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Eye, EyeOff, Moon, RotateCcw, Sun } from "lucide-react";
-import { askQuestions, byId, hardQuestions, hotTopics, otherQuestions, twentyQuestions } from "@/lib/bank";
+import { askQuestions, byId, hardQuestions, hotTopics, twentyQuestions } from "@/lib/bank";
 import { drawPerson, freshSession, personTitle, type DrawnCard, type PersonRound, type SessionState } from "@/lib/draw";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-const STORAGE_KEY = "branch-interview-session-v10";
-const DONE_KEY = "branch-interview-done-v10";
+const STORAGE_KEY = "branch-interview-session-v11";
+const DONE_KEY = "branch-interview-done-v11";
 const THEME_KEY = "branch-interview-theme";
 const HEADCOUNT = 17;
 
@@ -253,7 +253,6 @@ function Home() {
         <Bank title="时事热点" items={hotTopics} />
         <Bank title="党章 · 难" items={hardQuestions} />
         <Bank title="党章 · 二十大" items={twentyQuestions} />
-        <Bank title="党章 · 其他" items={otherQuestions} />
         <Bank title="单独提问" items={askQuestions} />
       </section>
 
