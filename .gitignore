@@ -13,3 +13,4 @@ attachments
 .env
 .env.*
 *.log
+AGENTS.md
